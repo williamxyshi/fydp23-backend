@@ -2,6 +2,7 @@
 #include <Ethernet.h>
 #include <Robojax_L298N_DC_motor.h>
 #include <Servo.h>
+#include "HX711.h"
 
 // MOTOR STUFF STARTS ------------------------------
 // motor 1 settings
@@ -44,6 +45,23 @@ void changeMotorPower(int left, int right) {
   }
 }
 // MOTOR STUFF ENDS --------------------------------
+
+// LOAD SENSOR STUFF BEGINS ------------------------
+// HX711 circuit wiring
+const int LOADCELL_DOUT_PIN = 2;
+const int LOADCELL_SCK_PIN = 3;
+
+HX711 scale;
+
+// LOAD SENSOR STUFF ENDS --------------------------
+
+
+
+// WATER SENSOR BEGINS -----------------------------
+#define POWER_PIN  7
+#define SIGNAL_PIN A5
+
+int wetness = 0; // variable to store the sensor value
 
 
 // replace the MAC address below by the MAC address printed on a sticker on the Arduino Shield 2
@@ -99,6 +117,13 @@ void setup() {
   // Hopper servo setup
   servo.attach(8);
   servo.write(0);
+
+  // Load sensor setup
+  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+
+  // Water sensor setup
+  pinMode(POWER_PIN, OUTPUT);   // configure D7 pin as an OUTPUT
+  digitalWrite(POWER_PIN, LOW); // turn the sensor OFF
 }
 
 void loop() {
