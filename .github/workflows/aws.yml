@@ -6,7 +6,7 @@ on:
 
 env:
   AWS_REGION: us-east-2                   # set this to your preferred AWS region, e.g. us-west-1
-  ECR_REPOSITORY: 719885836147.dkr.ecr.us-east-2.amazonaws.com/fydpcr           # set this to your Amazon ECR repository name
+  ECR_REPOSITORY: fydpcr           # set this to your Amazon ECR repository name
   
 
 permissions:
