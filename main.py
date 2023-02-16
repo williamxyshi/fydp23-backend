@@ -20,17 +20,17 @@ scheduled : starttime -> when it starts (could be now or future)
 
 class CreateBrew(BaseModel):
   type: str
-  start_time: datetime
-  end_time: datetime
-  interval: datetime #every x hours
+  start_time: datetime.datetime
+  end_time: datetime.datetime
+  interval: datetime.datetime #every x hours
   water_amount: int
   ground_amount: int
 
 class EditBrew(BaseModel):
   id: str
-  start_time: datetime
-  end_time: datetime
-  interval: datetime
+  start_time: datetime.datetime
+  end_time: datetime.datetime
+  interval: datetime.datetime
   water_amount: int
   ground_amount: int
 
