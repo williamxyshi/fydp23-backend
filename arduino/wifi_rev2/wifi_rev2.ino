@@ -2,8 +2,8 @@
 #include <ArduinoJson.h>
 #include <utility/wifi_drv.h>
 
-char ssid[] = "RogersD6824";
-char pass[] = "082FBRogers";
+char ssid[] = "deadass";
+char pass[] = "ilovemywife";
 
 char brew_host[] = "fydp.eba-twsqhru6.us-east-1.elasticbeanstalk.com";
 int port = 80;      // port
@@ -85,9 +85,7 @@ void loop() {
       WiFiDrv::digitalWrite(26, LOW);
       WiFiDrv::digitalWrite(27, LOW);      
     }
-  }
-
-
+  }  
 }
 
 String skipResponseHeaders(String response) {
