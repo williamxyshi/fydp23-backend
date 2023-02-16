@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, BaseSettings
+from pydantic import BaseModel
 import datetime
 
 app = FastAPI()
@@ -37,8 +37,8 @@ class EditBrew(BaseModel):
 class Demo(BaseModel):
   action: str
 
-class Settings(BaseSettings):
-   action: str
+class Settings():
+   action: str = "wait"
 
 class DeleteBrew(BaseModel):
   id: str
@@ -79,7 +79,9 @@ async def root():
 
 @app.post("/demo")
 async def post_demo(data: Demo):
-  if data.action != "go" or data.action != "stop":
+  print(data.action)
+  print(type(data.action))
+  if data.action != "go" and data.action != "stop":
     raise HTTPException(status_code=400, detail="action must be go or stop")
   settings.action = data.action
   return {"message": "success"}
