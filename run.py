@@ -5,6 +5,7 @@ as a container entrypoint script
 import uvicorn
 
 from settings import UvicornConfig
+from os import getenv
 # from service.core.database.database import engine
 
 if __name__ == "__main__":

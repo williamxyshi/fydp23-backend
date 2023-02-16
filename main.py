@@ -1,5 +1,5 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, BaseSettings
 import datetime
 
 app = FastAPI()
@@ -34,11 +34,18 @@ class EditBrew(BaseModel):
   water_amount: int
   ground_amount: int
 
+class Demo(BaseModel):
+  action: str
+
+class Settings(BaseSettings):
+   action: str
+
 class DeleteBrew(BaseModel):
   id: str
 
 brews = []
 current_brew = {}
+settings = Settings()
 
 #Return all brews
 @app.get("/")
@@ -69,3 +76,14 @@ async def root():
 @app.delete("/")
 async def root():
     return {"message": "Hello World"}
+
+@app.post("/demo")
+async def post_demo(data: Demo):
+  if data.action != "go" or data.action != "stop":
+    raise HTTPException(status_code=400, detail="action must be go or stop")
+  settings.action = data.action
+  return {"message": "success"}
+
+@app.get("/demo")
+async def get_demo():
+   return {"action": settings.action}
