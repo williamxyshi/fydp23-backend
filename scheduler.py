@@ -1,12 +1,12 @@
 from asyncio import QueueEmpty
 from datetime import datetime, timedelta
 
+from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.schedulers.blocking import BlockingScheduler
 from sqlalchemy.orm import Session
 
-sched: BlockingScheduler = BlockingScheduler()
+sched: BlockingScheduler = BackgroundScheduler()
 sched.start()
-
 
 #single scheduled
 def add_single_brew_job(start_date: int):

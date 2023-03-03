@@ -109,7 +109,7 @@ async def repeated_brew(data: RepeatBrew):
 
 # schedule a brew
 @app.post("/brew")
-async def root(data: CreateBrew):
+async def root(data: SingleBrew):
     print("single brew")
     scheduler.add_single_brew_job(data.start_time)
 
