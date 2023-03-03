@@ -5,23 +5,19 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from sqlalchemy.orm import Session
 
 sched: BlockingScheduler = BlockingScheduler()
+sched.start()
 
 
-def sync_brews():
-    print("TODO IMPLEMENT")
+#single scheduled
+def add_single_brew_job(start_date: int):
+    sched.add_job(trigger_brew, 'date', run_date=start_date)
 
 
-def notify_brew():
-    print("TODO IMPLEMENT")
+#scheduled rbrew job to repeat
+def add_brew_job(day: int, hour: str, minute: str):
+    sched.add_job(trigger_brew, 'cron', day_of_week= day, hour=hour)
+
+def trigger_brew():
+    print("trigger brew scheduler")
 
 
-def add_transformation():
-    sched.add_job()
-
-
-def start_scheduler():
-    sched.start()
-
-
-def stop_scheduler():
-    sched.shutdown()

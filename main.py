@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import time
 import math
+import scheduler
 
 app = FastAPI()
 
@@ -25,11 +26,10 @@ HRS_TO_SECONDS = 3600
 class CreateBrew(BaseModel):
     type: str
     start_time: str
-    end_time: str
-    interval: str  # every x hours
     water_amount: int
     ground_amount: int
-
+    days: list
+    duration: str
 
 class EditBrew(BaseModel):
     id: str
@@ -97,10 +97,16 @@ async def root():
 async def root(data: CreateBrew):
     if data.type == "single":
         print("single brew")
-        brew = {""}
+        scheduler.add_single_brew_job(data.start_time)
 
     elif data.type == "schedule":
         print("schedule a brew")
+
+        for day in data.days:
+            time_stamp = data.start_time.split(":")
+            print(time_stamp)
+            scheduler.add_brew_job(day=day, hour=time_stamp[0], minute=time_stamp[1])   
+
 
     return {"message": "Hello World"}
 
