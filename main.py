@@ -23,7 +23,7 @@ scheduled : starttime -> when it starts (could be now or future)
 HRS_TO_SECONDS = 3600
 
 class SingleBrew(BaseModel):
-    ready_timestamp: str
+    ready_time: str
     duration: str
     
     water_amount: int
@@ -98,7 +98,7 @@ async def root():
     return {"data": brews}
 
 @app.post("/brew/schedule")
-async def repeated_brew(data: CreateBrew):
+async def repeated_brew(data: RepeatBrew):
     print("schedule a brew")
 
     for day in data.days:
