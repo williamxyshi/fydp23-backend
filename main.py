@@ -3,7 +3,7 @@ from pydantic import BaseModel
 import time
 import math
 import scheduler
-
+from typing import Optional
 app = FastAPI()
 
 """
@@ -22,10 +22,16 @@ scheduled : starttime -> when it starts (could be now or future)
 
 HRS_TO_SECONDS = 3600
 
+class SingleBrew(BaseModel):
+    ready_timestamp: str
+    duration: str
+    
+    water_amount: int
+    ground_amount: int
+    
 
-class CreateBrew(BaseModel):
-    type: str
-    start_time: str
+class RepeatBrew(BaseModel):
+    ready_time: str
     water_amount: int
     ground_amount: int
     days: list
