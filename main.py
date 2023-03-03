@@ -91,24 +91,22 @@ settings = Settings()
 async def root():
     return {"data": brews}
 
+@app.post("/brew/schedule")
+async def repeated_brew(data: CreateBrew):
+    print("schedule a brew")
+
+    for day in data.days:
+        time_stamp = data.start_time.split(":")
+        print(time_stamp)
+        scheduler.add_brew_job(day=day, hour=time_stamp[0], minute=time_stamp[1])   
+
 
 # schedule a brew
-@app.post("/")
+@app.post("/brew")
 async def root(data: CreateBrew):
-    if data.type == "single":
-        print("single brew")
-        scheduler.add_single_brew_job(data.start_time)
+    print("single brew")
+    scheduler.add_single_brew_job(data.start_time)
 
-    elif data.type == "schedule":
-        print("schedule a brew")
-
-        for day in data.days:
-            time_stamp = data.start_time.split(":")
-            print(time_stamp)
-            scheduler.add_brew_job(day=day, hour=time_stamp[0], minute=time_stamp[1])   
-
-
-    return {"message": "Hello World"}
 
 
 # edit a brew
