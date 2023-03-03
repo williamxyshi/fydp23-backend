@@ -9,15 +9,15 @@ sched: BlockingScheduler = BackgroundScheduler()
 sched.start()
 
 #single scheduled
-def add_single_brew_job(start_date: int):
-    sched.add_job(trigger_brew, 'date', run_date=start_date)
+def add_single_brew_job(start_date: int, duration: int):
+    sched.add_job(trigger_brew, 'date', [duration], run_date=start_date)
 
 
 #scheduled rbrew job to repeat
-def add_brew_job(day: int, hour: str, minute: str):
-    sched.add_job(trigger_brew, 'cron', day_of_week= day, hour=hour)
+def add_brew_job(day: int, hour: str, minute: str, duration: int):
+    sched.add_job(trigger_brew, 'cron', [duration], day_of_week= day, hour=hour)
 
-def trigger_brew():
+def trigger_brew(duration: int):
     print("trigger brew scheduler")
 
 
