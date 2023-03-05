@@ -4,20 +4,33 @@
 #include <L298N.h>
 #include <LiquidCrystal.h>
 #include <SoftwareSerial.h>
+#include <Servo.h>
+
+// Servo pin
+#define SERVO = 9;
 
 // motor pins
 #define ENA 3
 #define IN1 4
 #define IN2 5
 
+// pump pins
+#define ENB 6
+#define IN3 7
+#define IN4 8
+
 // Water level sensor
 #define WATER_SIGNAL A1
-#define WATER_POWER 7
+#define WATER_POWER 10
 
 // joystick pins
 #define BUTTON 13
 
 L298N motor(ENA, IN1, IN2);
+L298N pump(ENB, IN3, IN4);
+
+// Length of time in milliseconds to pump water for
+const unsigned long waterInterval = 1000L;
 
 unsigned long lastConnectionTime = 0;
 
@@ -27,22 +40,33 @@ char ssid[] = "deadass";
 char pass[] = "ilovemywife";
 
 char brew_host[] = "fydp.eba-twsqhru6.us-east-1.elasticbeanstalk.com";
-int port = 80;      // port
+int port = 80;  // port
 
-int status = WL_IDLE_STATUS;      //connection status
-WiFiServer server(80);            //server socket
+int status = WL_IDLE_STATUS;  //connection status
+WiFiServer server(80);        //server socket
 
 WiFiClient client = server.available();
+
+// Servo
+Servo hopper;
+
+int hopper_pos = 0;
+
+// Flag to detect if brew is already started
+bool brew_started = false;
+bool brew_stopped = true;
 
 void setup() {
   Serial.begin(9600);
   while (!Serial);
 
+  hopper.attach(SERVO);
+
   // RGB LED's
   WiFiDrv::pinMode(25, OUTPUT);  //GREEN
   WiFiDrv::pinMode(26, OUTPUT);  //RED
   WiFiDrv::pinMode(27, OUTPUT);  //BLUE
-  
+
   enable_WiFi();
   connect_WiFi();
 
@@ -54,15 +78,17 @@ void setup() {
   IPAddress ip = WiFi.localIP();
   Serial.print("IP Address: ");
   Serial.println(ip);
-  
+
   long rssi = WiFi.RSSI();
   Serial.print("signal strength (RSSI):");
   Serial.print(rssi);
   Serial.println(" dBm");
 
   // Motor
-  float motorSpeed = floor(1/2 * 255);
   motor.setSpeed(100);
+
+  // Pump max flow
+  pump.setSpeed(255);
 
   // Water
   pinMode(WATER_POWER, OUTPUT);
@@ -103,7 +129,7 @@ void loop() {
   }
 
   int val = readWaterSensor();
-  
+
   if (val < 450) {
     WiFiDrv::digitalWrite(27, HIGH);
   } else {
@@ -133,48 +159,81 @@ void connectBrewDaddy() {
 void doAction(String action) {
   Serial.print("Doing action: ");
   Serial.println(action);
-  
-  if (action == "stop") {
+
+  if (action == "stop" && !brew_stopped) {
     for (int i = 0; i < 5; i++) {
       WiFiDrv::digitalWrite(26, HIGH);
       delay(500);
       WiFiDrv::digitalWrite(26, LOW);
       delay(500);
     }
-    
-//    WiFiDrv::digitalWrite(26, HIGH);
-//    
-//    while(digitalRead(BUTTON) != HIGH) {}
-//    
-//    controlMotor(-2);
-//
-//    while(digitalRead(BUTTON) != LOW) {}
-//
-//    while(digitalRead(BUTTON) != HIGH) {}
-//    
-//    controlMotor(0);
-//    
-//    while(digitalRead(BUTTON) != LOW) {}
-//    
-//    while(digitalRead(BUTTON) != HIGH) {}
-//
-//    controlMotor(2);
-//    
-//    while(digitalRead(BUTTON) != LOW) {}
-//
-//    while(digitalRead(BUTTON) != HIGH) {}
-//
-//    controlMotor(0);
-//    
-//    WiFiDrv::digitalWrite(26, LOW);
-  } else if (action == "go") {
+
+    //    WiFiDrv::digitalWrite(26, HIGH);
+    //
+    //    while(digitalRead(BUTTON) != HIGH) {}
+    //
+    //    controlMotor(-2);
+    //
+    //    while(digitalRead(BUTTON) != LOW) {}
+    //
+    //    while(digitalRead(BUTTON) != HIGH) {}
+    //
+    //    controlMotor(0);
+    //
+    //    while(digitalRead(BUTTON) != LOW) {}
+    //
+    //    while(digitalRead(BUTTON) != HIGH) {}
+    //
+    //    controlMotor(2);
+    //
+    //    while(digitalRead(BUTTON) != LOW) {}
+    //
+    //    while(digitalRead(BUTTON) != HIGH) {}
+    //
+    //    controlMotor(0);
+    //
+    //    WiFiDrv::digitalWrite(26, LOW);
+  } else if (action == "go" && !brew_started) {
     for (int i = 0; i < 5; i++) {
       WiFiDrv::digitalWrite(25, HIGH);
       delay(500);
       WiFiDrv::digitalWrite(25, LOW);
       delay(500);
     }
+
+    startBrew();
   }
+}
+
+void startBrew() {
+  unsigned long start = millis();
+  unsigned long end = start;
+
+  pump.forward();
+  // Pump water for a bit
+  while ((end - start) < waterInterval) { end = millis() }
+  pump.stop();
+
+  // Dispense grounds
+  // Open
+  for (hopper_pos = 0; hopper_pos <= 180; hopper_pos += 1) {
+    hopper.write(hopper_pos);
+    delay(15);
+  }
+  // Wait for gravity to do work
+  delay(500);
+  // Close
+  for (hopper_pos = 180; hopper_pos >= 0; hopper_pos -= 1) {
+    hopper.write(hopper_pos);
+    delay(15);
+  }
+
+  brew_started = true;
+  brew_stopped = false;
+}
+
+void stopBrew() {
+  
 }
 
 int readWaterSensor() {
@@ -190,12 +249,10 @@ void controlMotor(int x) {
 
   if (x == 2) {
     motor.forward();
-  }
-  else if (x == -2) {
+  } else if (x == -2) {
     Serial.println("setting backwards");
     motor.backward();
-  }
-  else {
+  } else {
     motor.stop();
   }
 }
@@ -206,7 +263,7 @@ String skipResponseHeaders(String response) {
     String json_str = response.substring(i + 4);
     Serial.print("Skipping headers, we get: ");
     Serial.println(json_str);
-    return json_str;   
+    return json_str;
   }
   return "";
 }
@@ -216,7 +273,8 @@ void enable_WiFi() {
   if (WiFi.status() == WL_NO_MODULE) {
     Serial.println("Communication with WiFi module failed!");
     // don't continue
-    while (true);
+    while (true)
+      ;
   }
 
   String fv = WiFi.firmwareVersion();
