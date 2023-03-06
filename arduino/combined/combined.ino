@@ -5,9 +5,7 @@
 #include <LiquidCrystal.h>
 #include <SoftwareSerial.h>
 #include <Servo.h>
-
-// Servo pin
-#define SERVO = 9;
+#include <Encoder.h>
 
 // motor pins
 #define ENA 3
@@ -19,14 +17,25 @@
 #define IN3 7
 #define IN4 8
 
+Encoder encoder(9, 10);
+
+// Servo pin
+#define SERVO 11
+
 // Water level sensor
 #define WATER_SIGNAL A1
-#define WATER_POWER 10
+#define WATER_POWER 12
 
 // joystick pins
 #define BUTTON 13
 
+// Limit switches
+#define CARAFE 0
+#define TOP 1
+
 L298N motor(ENA, IN1, IN2);
+long press_pos = -999;
+
 L298N pump(ENB, IN3, IN4);
 
 // Length of time in milliseconds to pump water for
@@ -95,6 +104,8 @@ void setup() {
   digitalWrite(WATER_POWER, LOW);
 
   pinMode(BUTTON, INPUT);
+  pinMode(CARAFE, INPUT);
+  pinMode(TOP, INPUT);
 }
 
 void loop() {
@@ -211,7 +222,7 @@ void startBrew() {
 
   pump.forward();
   // Pump water for a bit
-  while ((end - start) < waterInterval) { end = millis() }
+  while ((end - start) < waterInterval) { end = millis(); }
   pump.stop();
 
   // Dispense grounds
@@ -233,7 +244,33 @@ void startBrew() {
 }
 
 void stopBrew() {
+  motor.forward();
+
+  // Move down until we bottom out
+  while (press_pos <= 96000) {
+    long new_pos = encoder.read();
+    press_pos = new_pos
+  }
   
+  // Stop motor when we bottom out
+  motor.stop();
+
+  // Wait until carafe is removed
+  int carafeIn = 1;
+  while (carafeState) {carafeState = digitalRead(CARAFE);}
+
+  // Move press to top
+  int topHit = 0;
+  motor.backward();
+  while (!topHit) {topHit = digitalRead(TOP);}
+
+  // Stop motor at top and reset encoder values
+  motor.stop();
+  encoder.write(0);
+  press_pos = -999;
+  
+  brew_started = false;
+  brew_stopped = true;
 }
 
 int readWaterSensor() {

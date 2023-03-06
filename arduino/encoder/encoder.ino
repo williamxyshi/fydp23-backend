@@ -24,19 +24,10 @@ L298N motor(ENA, IN1, IN2);
  #define RED 26
  #define BLUE 27
 
- int counter = 0;
- int currentStateCLK;
- int lastStateCLK;
- String currentDir ="";
-
  long pos_motor = -999;
 
  void setup() { 
-   
-   // Set encoder pins as inputs  
-   pinMode (CLK,INPUT);
-   pinMode (DT,INPUT);
-   
+
    // RGB LED'S
    WiFiDrv::pinMode(GREEN, OUTPUT);
    WiFiDrv::pinMode(RED, OUTPUT);  
@@ -44,10 +35,6 @@ L298N motor(ENA, IN1, IN2);
    
    // Setup Serial Monitor
    Serial.begin (9600);
-   
-   // Read the initial state of inputCLK
-   // Assign to previousStateCLK variable
-   lastStateCLK = digitalRead(CLK);
 
    motor.setSpeed(170);
    
