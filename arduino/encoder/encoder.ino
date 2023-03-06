@@ -1,6 +1,7 @@
 #include <L298N.h>
 #include <WiFiNINA.h>
 #include <utility/wifi_drv.h>
+#include <Encoder.h>
 
 
 // motor pins
@@ -14,24 +15,27 @@
 L298N motor(ENA, IN1, IN2);
  
  // Rotary Encoder Inputs
- #define inputCLK 8
- #define inputDT 9
+ #define CLK 9
+ #define DT 8
+
+ Encoder encoder(9, 8);
 
  #define GREEN 25
  #define RED 26
  #define BLUE 27
 
- int counter = 0; 
+ int counter = 0;
  int currentStateCLK;
- int previousStateCLK; 
+ int lastStateCLK;
+ String currentDir ="";
 
- String encdir ="";
+ long pos_motor = -999;
 
  void setup() { 
    
    // Set encoder pins as inputs  
-   pinMode (inputCLK,INPUT);
-   pinMode (inputDT,INPUT);
+   pinMode (CLK,INPUT);
+   pinMode (DT,INPUT);
    
    // RGB LED'S
    WiFiDrv::pinMode(GREEN, OUTPUT);
@@ -43,9 +47,9 @@ L298N motor(ENA, IN1, IN2);
    
    // Read the initial state of inputCLK
    // Assign to previousStateCLK variable
-   previousStateCLK = digitalRead(inputCLK);
+   lastStateCLK = digitalRead(CLK);
 
-   motor.setSpeed(100);
+   motor.setSpeed(170);
    
    Serial.println("Setup done");
  }
@@ -53,10 +57,10 @@ L298N motor(ENA, IN1, IN2);
  void controlMotor(int x) {
   int direction = motor.getDirection();
 
-  if (x == 2) {
+  if (x > 0) {
     motor.forward();
   }
-  else if (x == -2) {
+  else if (x < -1) {
     motor.backward();
   }
   else {
@@ -65,39 +69,45 @@ L298N motor(ENA, IN1, IN2);
 }
 
  void loop() {
-
+  
   float joystick_v = analogRead(JOY_X);
   int x = map(joystick_v, 0, 1023, -2, 2); // map the joystick voltage to (-2,2))
 
   controlMotor(x);
+
+  long new_pos = encoder.read();
+
+  if (new_pos != pos_motor) {
+    Serial.print("Motor position: ");
+    Serial.println(new_pos);
+
+    pos_motor = new_pos;
+  }
   
-  // Read the current state of inputCLK
-   currentStateCLK = digitalRead(inputCLK);
-    
-   // If the previous and the current state of the inputCLK are different then a pulse has occured
-   if (currentStateCLK != previousStateCLK){ 
-       
-     // If the inputDT state is different than the inputCLK state then 
-     // the encoder is rotating counterclockwise
-     if (digitalRead(inputDT) != currentStateCLK) { 
-       counter --;
-       encdir ="CCW";
-       WiFiDrv::digitalWrite(RED, LOW);
-       WiFiDrv::digitalWrite(GREEN, HIGH);
-       
-     } else {
-       // Encoder is rotating clockwise
-       counter ++;
-       encdir ="CW";
-       WiFiDrv::digitalWrite(RED, HIGH);
-       WiFiDrv::digitalWrite(GREEN, LOW);
-       
-     }
-     Serial.print("Direction: ");
-     Serial.print(encdir);
-     Serial.print(" -- Value: ");
-     Serial.println(counter);
-   } 
-   // Update previousStateCLK with the current state
-   previousStateCLK = currentStateCLK; 
+//  // Read the current state of inputCLK
+//  currentStateCLK = digitalRead(CLK);
+//    
+//  // If last and current state of CLK are different, then pulse occurred
+//  // React to only 1 state change to avoid double count
+//  if (currentStateCLK != lastStateCLK  && currentStateCLK == 1){
+//
+//    // If the DT state is different than the CLK state then
+//    // the encoder is rotating CCW so decrement
+//    if (digitalRead(DT) != currentStateCLK) {
+//      counter --;
+//      currentDir ="CCW";
+//    } else {
+//      // Encoder is rotating CW so increment
+//      counter ++;
+//      currentDir ="CW";
+//    }
+//
+//    Serial.print("Direction: ");
+//    Serial.print(currentDir);
+//    Serial.print(" | Counter: ");
+//    Serial.println(counter);
+//  }
+//
+//  // Remember last CLK state
+//  lastStateCLK = currentStateCLK;
  }
