@@ -4,6 +4,8 @@ import time
 import math
 import scheduler
 from typing import Optional
+import datetime
+
 app = FastAPI()
 
 """
@@ -22,20 +24,21 @@ scheduled : starttime -> when it starts (could be now or future)
 
 HRS_TO_SECONDS = 3600
 
+
 class SingleBrew(BaseModel):
-    ready_time: str
-    duration: str
-    
+    ready_timestamp: int
+    duration: int
     water_amount: int
     ground_amount: int
-    
+
 
 class RepeatBrew(BaseModel):
     ready_time: str
     water_amount: int
     ground_amount: int
     days: list
-    duration: str
+    duration: int
+
 
 class EditBrew(BaseModel):
     id: str
@@ -97,22 +100,27 @@ settings = Settings()
 async def root():
     return {"data": brews}
 
+
 @app.post("/brew/schedule")
 async def repeated_brew(data: RepeatBrew):
     print("schedule a brew")
 
     for day in data.days:
-        time_stamp = data.start_time.split(":")
+        time_stamp = data.ready_time.split(":")
         print(time_stamp)
-        scheduler.add_brew_job(day=day, hour=time_stamp[0], minute=time_stamp[1])   
+        scheduler.add_brew_job(
+            day=day, hour=time_stamp[0], minute=time_stamp[1], duration=data.duration
+        )
 
 
 # schedule a brew
 @app.post("/brew")
 async def root(data: SingleBrew):
     print("single brew")
-    scheduler.add_single_brew_job(data.start_time)
-
+    start_time = datetime.datetime.fromtimestamp(
+        data.ready_timestamp - data.duration * HRS_TO_SECONDS
+    )
+    scheduler.add_single_brew_job(start_time, data.duration)
 
 
 # edit a brew

@@ -35,6 +35,21 @@ void loop() {
   delay(5000);
 }
 
+void sweepServo(Servo &servo, int start, int finish) {
+  if (start < finish) {
+    for (servo_pos = start; servo_pos <= finish; servo_pos += 1) {
+      servo.write(servo_pos);
+      delay(15);
+    }
+  }
+  if (start > finish) {
+    for (servo_pos = start; servo_pos >= finish; servo_pos -= 1) {
+      servo.write(servo_pos);
+      delay(15);
+    }
+  }
+}
+
 void startBrew() {
   Serial.println("Starting brew");
   unsigned long start = millis();
