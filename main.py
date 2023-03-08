@@ -1,11 +1,10 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
-import time
-import math
 import scheduler
 import datetime
 
 from consts import HRS_TO_SECS
+from state import State
+from models import SingleBrew, ScheduledBrew, Demo
 
 app = FastAPI()
 
@@ -24,37 +23,9 @@ scheduled : starttime -> when it starts (could be now or future)
 """
 
 
-class SingleBrew(BaseModel):
-    ready_timestamp: int
-    duration: int
-    water_amount: int
-    ground_amount: int
-
-
-class ScheduledBrew(BaseModel):
-    ready_time: str
-    water_amount: int
-    ground_amount: int
-    days: list
-    duration: int
-
-
-class Demo(BaseModel):
-    action: str
-
-
 class Brew:
     ready_time: int
     duration: int
-
-
-class State:
-    def __init__(self):
-        self.action: str = "wait"
-
-
-class DeleteBrew(BaseModel):
-    id: str
 
 
 state = State()
