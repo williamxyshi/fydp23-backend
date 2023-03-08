@@ -3,17 +3,17 @@ from pydantic import BaseModel
 
 class SingleBrew(BaseModel):
     ready_timestamp: int
-    duration: int
-    water_amount: int
-    ground_amount: int
+    size: str
+    strength: str
+    duration: int  # in seconds!
 
 
 class ScheduledBrew(BaseModel):
     ready_time: str
-    water_amount: int
-    ground_amount: int
     days: list
-    duration: int
+    size: str
+    strength: str
+    duration: int  # in seconds!
 
 
 class Demo(BaseModel):
