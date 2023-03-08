@@ -21,7 +21,7 @@ scheduled : starttime -> when it starts (could be now or future)
             endtime -> when to end the brew starting now
             interval -> every interval time we start a brew
 
-"""    
+"""
 
 
 class SingleBrew(BaseModel):
@@ -51,45 +51,13 @@ class Brew:
 class State:
     def __init__(self):
         self.action: str = "wait"
-        self.days: list(int) = []
-        self.
-
-    def current_brew(self):
-        if len(self.brews) == 0:
-            return None
-        else:
-            return self.brews[0]
-
-    def get_curr_brew_status(self):
-        curr_brew = self.current_brew()
-        if curr_brew:
-            start_time = curr_brew.ready_time - curr_brew.duration * HRS_TO_SECS
-            now = math.floor(time.time())
-            print(start_time)
-            print(now)
-            if now < start_time:
-                return "wait"
-            elif now > curr_brew.ready_time:
-                return "done"
-            else:
-                return "brewing"
-        else:
-            return "none"
 
 
 class DeleteBrew(BaseModel):
     id: str
 
 
-brews = []
-current_brew = {}
 state = State()
-
-
-# Return all brews
-@app.get("/")
-async def root():
-    return {"data": brews}
 
 
 @app.post("/brew/schedule")
@@ -123,8 +91,3 @@ async def get_action():
 @app.get("/brews")
 async def get_brews():
     return {"action": state.brews}
-
-
-@app.get("/current-brew-status")
-async def get_current_brew_status():
-    return {"current_brew": state.get_curr_brew_status()}
