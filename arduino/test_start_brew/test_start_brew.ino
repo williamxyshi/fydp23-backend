@@ -1,15 +1,30 @@
 #include <L298N.h>
 #include <Servo.h>
+#include <Encoder.h>
 
 // Servo pin
 #define SERVO 11
+
+// motor pins
+#define ENA 3
+#define IN1 4
+#define IN2 5
 
 // pump pins
 #define ENB 6
 #define IN3 7
 #define IN4 8
 
+Encoder encoder(9, 10);
+
+L298N motor(ENA, IN1, IN2);
 L298N pump(ENB, IN3, IN4);
+
+// Limit switches
+#define CARAFE 0
+#define TOP 1
+
+long press_pos = -999;
 
 // Length of time in milliseconds to pump water for
 const unsigned long waterInterval = 20000L;
@@ -22,15 +37,39 @@ void setup() {
   Serial.begin(9600);
   while (!Serial);
   // put your setup code here, to run once:
-  hopper.attach(SERVO, 500, 2500);
+  hopper.attach(SERVO);
 
+  motor.setSpeed(122);
   pump.setSpeed(255);
+
+  hopper.write(90);
+  delay(500);
   Serial.println("Setup done");
 }
 
 void loop() {
+  Serial.println("Starting brew");
   // put your main code here, to run repeatedly:
-  startBrew();
+  motor.forward();
+
+  // Move down until we bottom out
+  while (press_pos <= 95000) {
+    long new_pos = encoder.read();
+    press_pos = new_pos;
+  }
+
+  motor.stop();
+
+  delay(5000);
+
+  motor.backward();
+
+  while (press_pos >= 1000) {
+    long new_pos = encoder.read();
+    press_pos = new_pos;
+  }
+
+  motor.stop();
 
   delay(5000);
 }
@@ -40,36 +79,64 @@ void startBrew() {
   unsigned long start = millis();
   unsigned long end = start;
 
-//  pump.forward();
+  pump.forward();
 
   // Dispense grounds
-  // Open first
-  for (hopper_pos = 0; hopper_pos <= 180; hopper_pos += 1) {
-    hopper.write(hopper_pos);
-    Serial.println(hopper.read());
-    delay(15);
+  open_hopper(2, start);
 
-    end = millis();
-    if ((end-start) >= waterInterval) {
-      pump.stop();
-    }
-    
-  }  
-  // Wait for gravity to do work
-  delay(500);
+  while ((end - start) < waterInterval) { end = millis(); }
+  pump.stop();
+}
+
+void open_hopper(int x, int start) {
+  for (int i = 0; i < x; i++) {
+    Serial.println("OPENING TOP");
+    hopper.write(0);
+    delay(4000);
+      
+    // Wait for gravity to do work
+    hopper.write(90);
+    delay(4000);
   
-  // Close
-  for (hopper_pos = 180; hopper_pos >= 0; hopper_pos -= 1) {
-    hopper.write(hopper_pos);
-    Serial.println(hopper.read());
-    delay(15);
+    Serial.println("OPENING BOTTOM");
+  
+    hopper.write(180);
+    delay(4000);
+  
+    hopper.write(90);
+    delay(1000);
 
-    end = millis();
-    if ((end-start) >= waterInterval) {
+    unsigned long end = millis();
+    if ((end - start) >= waterInterval) {
       pump.stop();
     }
   }
-//
-//  while ((end - start) < waterInterval) { end = millis(); }
-//  pump.stop();
+}
+
+void stopBrew() {
+  motor.forward();
+
+  // Move down until we bottom out
+  while (press_pos <= 95000) {
+    long new_pos = encoder.read();
+    press_pos = new_pos;
+  }
+  
+  // Stop motor when we bottom out
+  motor.stop();
+
+  // Wait until carafe is removed
+  int carafeState = LOW;
+  while (carafeState == LOW) {carafeState = digitalRead(CARAFE);}
+  delay(2000);
+
+  // Move press to top
+  int topHit = HIGH;
+  motor.backward();
+  while (topHit == HIGH) {topHit = digitalRead(TOP);}
+
+  // Stop motor at top and reset encoder values
+  motor.stop();
+  encoder.write(0);
+  press_pos = -999;
 }
