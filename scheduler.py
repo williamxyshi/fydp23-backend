@@ -1,25 +1,36 @@
-from asyncio import QueueEmpty
-from datetime import datetime, timedelta
-
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.schedulers.blocking import BlockingScheduler
-from sqlalchemy.orm import Session
+import asyncio
 
-sched: BlockingScheduler = BackgroundScheduler()
+from main import State
+
+sched = BackgroundScheduler()
 sched.start()
 
 
 # single scheduled
-def add_single_brew_job(start_date: int, duration: int):
-    sched.add_job(trigger_brew, "date", [duration], run_date=start_date)
+def add_single_brew_job(start_date: int, duration: int, state: State):
+    sched.add_job(trigger_brew, "date", [duration, state], run_date=start_date)
 
 
 # scheduled brew job to repeat
-def add_brew_job(day: int, hour: str, minute: str, duration: int):
+def add_brew_job(day: int, hour: str, minute: str, duration: int, state: State):
     sched.add_job(
-        trigger_brew, "cron", [duration], day_of_week=day, hour=hour, minute=minute
+        trigger_brew,
+        "cron",
+        [duration, state],
+        day_of_week=day,
+        hour=hour,
+        minute=minute,
     )
 
 
-def trigger_brew(duration: int):
-    print("trigger brew scheduler")
+# clear state
+def remove_all_jobs():
+    sched.remove_all_jobs()
+
+
+# action to run when a brew job is ready
+def trigger_brew(duration: int, state: State):
+    state.action = "start"
+    asyncio.sleep(duration)
+    state.action = "stop"

@@ -1,10 +1,11 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
 import time
 import math
 import scheduler
-from typing import Optional
 import datetime
+
+from consts import HRS_TO_SECS
 
 app = FastAPI()
 
@@ -20,9 +21,7 @@ scheduled : starttime -> when it starts (could be now or future)
             endtime -> when to end the brew starting now
             interval -> every interval time we start a brew
 
-"""
-
-HRS_TO_SECONDS = 3600
+"""    
 
 
 class SingleBrew(BaseModel):
@@ -32,7 +31,7 @@ class SingleBrew(BaseModel):
     ground_amount: int
 
 
-class RepeatBrew(BaseModel):
+class ScheduledBrew(BaseModel):
     ready_time: str
     water_amount: int
     ground_amount: int
@@ -40,28 +39,20 @@ class RepeatBrew(BaseModel):
     duration: int
 
 
-class EditBrew(BaseModel):
-    id: str
-    start_time: str
-    end_time: str
-    interval: str
-    water_amount: int
-    ground_amount: int
-
-
 class Demo(BaseModel):
     action: str
 
 
-class Brew(BaseModel):
+class Brew:
     ready_time: int
     duration: int
 
 
-class Settings:
+class State:
     def __init__(self):
         self.action: str = "wait"
-        self.brews: list(Brew) = []
+        self.days: list(int) = []
+        self.
 
     def current_brew(self):
         if len(self.brews) == 0:
@@ -72,7 +63,7 @@ class Settings:
     def get_curr_brew_status(self):
         curr_brew = self.current_brew()
         if curr_brew:
-            start_time = curr_brew.ready_time - curr_brew.duration * HRS_TO_SECONDS
+            start_time = curr_brew.ready_time - curr_brew.duration * HRS_TO_SECS
             now = math.floor(time.time())
             print(start_time)
             print(now)
@@ -92,7 +83,7 @@ class DeleteBrew(BaseModel):
 
 brews = []
 current_brew = {}
-settings = Settings()
+state = State()
 
 
 # Return all brews
@@ -102,66 +93,38 @@ async def root():
 
 
 @app.post("/brew/schedule")
-async def repeated_brew(data: RepeatBrew):
-    print("schedule a brew")
-
+async def scheduled_brew(data: ScheduledBrew):
     for day in data.days:
         time_stamp = data.ready_time.split(":")
-        print(time_stamp)
         scheduler.add_brew_job(
             day=day, hour=time_stamp[0], minute=time_stamp[1], duration=data.duration
         )
 
 
 # schedule a brew
-@app.post("/brew")
-async def root(data: SingleBrew):
-    print("single brew")
+@app.post("/brew/single")
+async def single_brew(data: SingleBrew):
     start_time = datetime.datetime.fromtimestamp(
-        data.ready_timestamp - data.duration * HRS_TO_SECONDS
+        data.ready_timestamp - data.duration * HRS_TO_SECS
     )
     scheduler.add_single_brew_job(start_time, data.duration)
 
 
-# edit a brew
-@app.put("/")
-async def root():
-    return {"message": "Hello World"}
+@app.delete("/brew")
+async def delete_brew():
+    scheduler.remove_all_jobs()
 
 
-# delete a brew
-@app.delete("/")
-async def root():
-    return {"message": "Hello World"}
-
-
-@app.post("/demo")
-async def post_demo(data: Demo):
-    print(data.action)
-    print(type(data.action))
-    if data.action != "go" and data.action != "stop":
-        raise HTTPException(status_code=400, detail="action must be go or stop")
-    settings.action = data.action
-    return {"message": "success"}
-
-
-@app.get("/demo")
-async def get_demo():
-    return {"action": settings.action}
-
-
-@app.post("/brews")
-async def post_brews(data: Brew):
-    print(data)
-    settings.brews.append(data)
-    return {"message": "hey"}
+@app.get("/action")
+async def get_action():
+    return {"action": state.action}
 
 
 @app.get("/brews")
 async def get_brews():
-    return {"brews": settings.brews}
+    return {"action": state.brews}
 
 
 @app.get("/current-brew-status")
 async def get_current_brew_status():
-    return {"current_brew": settings.get_curr_brew_status()}
+    return {"current_brew": state.get_curr_brew_status()}
