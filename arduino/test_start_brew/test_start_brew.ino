@@ -21,13 +21,16 @@ L298N motor(ENA, IN1, IN2);
 L298N pump(ENB, IN3, IN4);
 
 // Limit switches
-#define CARAFE 0
-#define TOP 1
+#define CARAFE 13
+#define TOP 2
 
 long press_pos = -999;
 
 // Length of time in milliseconds to pump water for
-const unsigned long waterInterval = 20000L;
+unsigned long waterInterval = 10000L;
+
+// Number of times to open and close the hopper
+int num_dispenses = 3;
 
 // Servo
 Servo hopper;
@@ -36,6 +39,8 @@ int hopper_pos = 0;
 void setup() {
   Serial.begin(9600);
   while (!Serial);
+  Serial.println("Here");
+  
   // put your setup code here, to run once:
   hopper.attach(SERVO);
 
@@ -45,69 +50,146 @@ void setup() {
   hopper.write(90);
   delay(500);
   Serial.println("Setup done");
+
+  pinMode(CARAFE, INPUT_PULLUP);
+  pinMode(TOP, INPUT_PULLUP);
 }
 
 void loop() {
   Serial.println("Starting brew");
-  // put your main code here, to run repeatedly:
-  motor.forward();
 
-  // Move down until we bottom out
-  while (press_pos <= 95000) {
-    long new_pos = encoder.read();
-    press_pos = new_pos;
-  }
-
-  motor.stop();
-
-  delay(5000);
-
+  // Wait until top is hit
+  int top = LOW;
   motor.backward();
-
-  while (press_pos >= 1000) {
-    long new_pos = encoder.read();
-    press_pos = new_pos;
+  
+  while (top == LOW) {
+    top = digitalRead(TOP);
+    if(top == HIGH) {
+      for(int i = 0; i < 5; i ++ ) {
+        top = digitalRead(TOP);
+        Serial.print("deb");
+        Serial.println(top);
+        if(top == LOW) {
+          break;
+        }
+      }
+    }
+    Serial.println(top);
   }
 
   motor.stop();
 
-  delay(5000);
-}
+  Serial.println("top has been hit :)");
+  
 
-void startBrew() {
-  Serial.println("Starting brew");
+  int carafeState = LOW;
+  while (carafeState == LOW) { 
+    carafeState = digitalRead(CARAFE);
+    if(carafeState == HIGH) {
+      for(int i = 0; i < 5; i ++ ) {
+        carafeState = digitalRead(CARAFE);
+        Serial.print("deb");
+        Serial.println(carafeState);
+        if(carafeState == LOW) {
+          break;
+        }
+      }
+    }
+    Serial.println(carafeState);
+  }
+  
+  open_hopper();
+
   unsigned long start = millis();
   unsigned long end = start;
 
   pump.forward();
-
-  // Dispense grounds
-  open_hopper(2, start);
-
-  while ((end - start) < waterInterval) { end = millis(); }
+  while ((end - start) < waterInterval) {
+    end = millis(); 
+    Serial.print("Running pump: ");
+    Serial.println(end - start);
+  }
   pump.stop();
+
+  delay(5000);
+
+  motor.forward();
+
+  Serial.println("Motor should be running");
+  // Move down until we bottom out
+  while (press_pos <= 102000) {
+    long new_pos = encoder.read();
+
+    // If our position is greater than this threshold
+    // Stop pushing if we are bottoming out
+    if (press_pos > 95000) {
+      if (new_pos == press_pos) {
+        break;
+      }
+    }
+    press_pos = new_pos;
+  }
+  // Stop motor when we bottom out
+  motor.stop();
+
+  Serial.println("Waiting for carafe to be removed");
+  carafeState = HIGH;
+  while (carafeState == HIGH) { carafeState = digitalRead(CARAFE); }
+  delay(2000);
+
+  // Wait until top is hit
+  top = LOW;
+  
+  motor.backward();
+  
+  while (top == LOW) {
+    top = digitalRead(TOP);
+    if(top == HIGH) {
+      for(int i = 0; i < 5; i ++ ) {
+        top = digitalRead(TOP);
+        Serial.print("deb");
+        Serial.println(top);
+        if(top == LOW) {
+          break;
+        }
+      }
+    }
+    Serial.println(top);
+  }
+
+  motor.stop();
+  press_pos = -999;
+  encoder.write(0);
+
+  while(true) {}
 }
 
-void open_hopper(int x, int start) {
-  for (int i = 0; i < x; i++) {
+// Opens hopper while checking if we should stop the pump
+void open_hopper() {
+  for (int i = 0; i < 3; i++) {
     Serial.println("OPENING TOP");
     hopper.write(0);
-    delay(4000);
-      
-    // Wait for gravity to do work
-    hopper.write(90);
-    delay(4000);
-  
-    Serial.println("OPENING BOTTOM");
-  
-    hopper.write(180);
-    delay(4000);
-  
-    hopper.write(90);
-    delay(1000);
+    delay(2000);
 
-    unsigned long end = millis();
+    Serial.println("OPENING BOTTOM");
+    hopper.write(180);
+    delay(2000);
+  }
+
+  Serial.println("Returning to neutral");
+  hopper.write(90);
+  delay(2000);
+}
+
+void waitForDurationAndCheckToStopPump(int duration, int start) {
+  unsigned long x = millis();
+  unsigned long end = x;
+  while ((end - x) < duration) {
+    end = millis();
     if ((end - start) >= waterInterval) {
+      Serial.print("Stopping after ");
+      Serial.print(end - start);
+      Serial.println("milliseconds.");
       pump.stop();
     }
   }
