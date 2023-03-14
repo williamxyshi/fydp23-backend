@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 import scheduler
 from state import State, Schedule
+from models import SingleBrew, ScheduledBrew
 
 app = FastAPI()
 
@@ -9,7 +10,7 @@ state = State()
 
 
 @app.post("/brew/schedule")
-async def scheduled_brew(data):
+async def scheduled_brew(data: ScheduledBrew):
     state.schedule = Schedule(data.days, data.ready_time)
     for day in data.days:
         await scheduler.add_scheduled_brew_job(
@@ -23,7 +24,7 @@ async def scheduled_brew(data):
 
 
 @app.post("/brew/single")
-async def single_brew(data):
+async def single_brew(data: SingleBrew):
     await scheduler.add_single_brew_job(
         ready_timestamp=data.ready_timestamp,
         duration=data.duration,
