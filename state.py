@@ -1,10 +1,9 @@
 from helpers import get_num_dispenses, get_pump_time_ms
 import asyncio
-from datetime import datetime
 
 
 class Schedule:
-    def __init__(self, days: list[int], ready_time: str):
+    def __init__(self, days, ready_time):
         self.days = days
         self.ready_time = ready_time
 

@@ -9,9 +9,7 @@ sched.start()
 
 
 # single scheduled
-async def add_single_brew_job(
-    ready_timestamp: int, duration: int, strength: str, size: str, state: State
-):
+async def add_single_brew_job(ready_timestamp, duration, strength, size, state):
     start_date = datetime.fromtimestamp(ready_timestamp - duration)
     sched.add_job(
         trigger_brew, "date", [duration, strength, size, state], run_date=start_date
@@ -19,9 +17,7 @@ async def add_single_brew_job(
 
 
 # scheduled brew job to repeat
-async def add_scheduled_brew_job(
-    day: int, ready_time: str, duration: int, strength: str, size: str, state: State
-):
+async def add_scheduled_brew_job(day, ready_time, duration, strength, size, state):
     hour, minute = ready_time.split(":")  # 4:20 -> 4, 20
     sched.add_job(
         trigger_brew,
@@ -39,7 +35,7 @@ def remove_all_jobs():
 
 
 # action to run when a brew job is ready
-async def trigger_brew(duration: int, strength: str, size: str, state: State):
+async def trigger_brew(duration, strength, size, state):
     state.finish_timestamp = None
 
     # tell arduino to run dispense/pump process
