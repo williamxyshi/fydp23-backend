@@ -2,6 +2,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import asyncio
 from state import State
 from datetime import datetime
+from math import floor
 
 sched = AsyncIOScheduler()
 sched.start()
@@ -39,13 +40,19 @@ def remove_all_jobs():
 
 # action to run when a brew job is ready
 async def trigger_brew(duration: int, strength: str, size: str, state: State):
+    state.finish_timestamp = None
+
     # tell arduino to run dispense/pump process
     state.action = "go"
+    state.duration = duration
     state.strength = strength
     state.size = size
 
     # wait for dispense/pump process to finish
     await state.start_event.wait()
+
+    # save start time for frontend
+    state.start_timestamp = floor(datetime.now().timestamp())
 
     # and now we wait for the duration to complete :P
     state.action = "wait"
@@ -60,6 +67,9 @@ async def trigger_brew(duration: int, strength: str, size: str, state: State):
 
     # wait for press process to finish
     await state.finish_event.wait()
+
+    # save finish time for frontend
+    state.finish_timestamp = floor(datetime.now().timestamp())
 
     # hey we're done the brew!
     state.action = "wait"
