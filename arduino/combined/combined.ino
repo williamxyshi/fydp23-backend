@@ -27,8 +27,8 @@ Encoder encoder(9, 10);
 #define WATER_POWER 12
 
 // Limit switches
-#define CARAFE 1
-#define TOP 0
+#define CARAFE 13
+#define TOP 2
 
 L298N motor(ENA, IN1, IN2);
 long press_pos = -999;
@@ -287,7 +287,7 @@ void stopBrew() {
   motor.forward();
 
   // Move down until we bottom out
-  while (press_pos <= 100000) {
+  while (press_pos <= 105000) {
     long new_pos = encoder.read();
     if (new_pos == press_pos) {
       break;
@@ -319,29 +319,24 @@ void stopBrew() {
 }
 
 // Opens hopper while checking if we should stop the pump
-void open_hopper(int start) {
+void open_hopper(unsigned long start) {
   for (int i = 0; i < num_dispenses; i++) {
     Serial.println("OPENING TOP");
     hopper.write(0);
-
-    // delay(4000) while checking if we should stop the pump
-    waitForDurationAndCheckToStopPump(4000, start);
-      
-    // Wait for gravity to do work
-    hopper.write(90);
-    waitForDurationAndCheckToStopPump(4000, start);
+    waitForDurationAndCheckToStopPump(2000, start);
+    //delay(2000);
 
     Serial.println("OPENING BOTTOM");
-  
     hopper.write(180);
-    waitForDurationAndCheckToStopPump(4000, start);
-  
-    hopper.write(90);
-    waitForDurationAndCheckToStopPump(1000, start);
+    waitForDurationAndCheckToStopPump(2000, start);
   }
+
+  Serial.println("Returning to neutral");
+  hopper.write(90);
+  waitForDurationAndCheckToStopPump(2000, start);
 }
 
-void waitForDurationAndCheckToStopPump(int duration, int start) {
+void waitForDurationAndCheckToStopPump(int duration, unsigned long start) {
   unsigned long x = millis();
   unsigned long end = x;
   while ((end - x) < duration) {

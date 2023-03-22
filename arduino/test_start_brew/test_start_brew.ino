@@ -74,114 +74,117 @@ void loop() {
         }
       }
     }
-    Serial.println(top);
   }
 
   motor.stop();
 
   Serial.println("top has been hit :)");
-  
 
-  int carafeState = LOW;
-  while (carafeState == LOW) { 
-    carafeState = digitalRead(CARAFE);
-    if(carafeState == HIGH) {
-      for(int i = 0; i < 5; i ++ ) {
-        carafeState = digitalRead(CARAFE);
-        Serial.print("deb");
-        Serial.println(carafeState);
-        if(carafeState == LOW) {
-          break;
-        }
-      }
-    }
-    Serial.println(carafeState);
-  }
-  
-  open_hopper();
+  encoder.write(0);
 
-  unsigned long start = millis();
-  unsigned long end = start;
-
-  pump.forward();
-  while ((end - start) < waterInterval) {
-    end = millis(); 
-    Serial.print("Running pump: ");
-    Serial.println(end - start);
-  }
-  pump.stop();
-
+//  int carafeState = LOW;
+//  while (carafeState == LOW) { 
+//    carafeState = digitalRead(CARAFE);
+//    Serial.println("Carafe is low");
+//    if(carafeState == HIGH) {
+//      for(int i = 0; i < 5; i ++ ) {
+//        carafeState = digitalRead(CARAFE);
+//        if(carafeState == LOW) {
+//          break;
+//        }
+//      }
+//    }
+//  }
+//
+//  unsigned long start = millis();
+//  unsigned long end = start;
+//
+//  pump.forward();
+//  open_hopper(start);
+//
+//  while ((end - start) < waterInterval) {
+//    end = millis(); 
+//    Serial.print("Running pump: ");
+//    Serial.println(end - start);
+//  }
+//  pump.stop();
+//
   delay(5000);
 
   motor.forward();
 
+  int press_rate = 0;
+  
   Serial.println("Motor should be running");
   // Move down until we bottom out
-  while (press_pos <= 102000) {
+  while (press_pos <= 105000) {
     long new_pos = encoder.read();
-
-    // If our position is greater than this threshold
-    // Stop pushing if we are bottoming out
-    if (press_pos > 95000) {
-      if (new_pos == press_pos) {
-        break;
-      }
-    }
+//    
+//    for (int i = 0; i < 10; i++) {
+//      delay(50);
+//      new_pos = encoder.read();
+//    }
+//    if (new_pos > 95000 && new_pos == press_pos) {
+//      break;
+//    }
+//    
     press_pos = new_pos;
   }
   // Stop motor when we bottom out
   motor.stop();
 
-  Serial.println("Waiting for carafe to be removed");
-  carafeState = HIGH;
-  while (carafeState == HIGH) { carafeState = digitalRead(CARAFE); }
-  delay(2000);
-
-  // Wait until top is hit
-  top = LOW;
-  
-  motor.backward();
-  
-  while (top == LOW) {
-    top = digitalRead(TOP);
-    if(top == HIGH) {
-      for(int i = 0; i < 5; i ++ ) {
-        top = digitalRead(TOP);
-        Serial.print("deb");
-        Serial.println(top);
-        if(top == LOW) {
-          break;
-        }
-      }
-    }
-    Serial.println(top);
-  }
-
-  motor.stop();
-  press_pos = -999;
-  encoder.write(0);
+//
+//  Serial.println("Waiting for carafe to be removed");
+//  carafeState = HIGH;
+//  while (carafeState == HIGH) { carafeState = digitalRead(CARAFE); }
+//  delay(2000);
+//
+//  // Wait until top is hit
+//  top = LOW;
+//  
+//  motor.backward();
+//  
+//  while (top == LOW) {
+//    top = digitalRead(TOP);
+//    if(top == HIGH) {
+//      for(int i = 0; i < 5; i ++ ) {
+//        top = digitalRead(TOP);
+//        Serial.print("deb");
+//        Serial.println(top);
+//        if(top == LOW) {
+//          break;
+//        }
+//      }
+//    }
+//    Serial.println(top);
+//  }
+//
+//  motor.stop();
+//  press_pos = -999;
+//  encoder.write(0);
 
   while(true) {}
 }
 
 // Opens hopper while checking if we should stop the pump
-void open_hopper() {
+void open_hopper(unsigned long start) {
   for (int i = 0; i < 3; i++) {
     Serial.println("OPENING TOP");
     hopper.write(0);
-    delay(2000);
+    waitForDurationAndCheckToStopPump(2000, start);
+    //delay(2000);
 
     Serial.println("OPENING BOTTOM");
     hopper.write(180);
-    delay(2000);
-  }
+    waitForDurationAndCheckToStopPump(2000, start);
+  } 
 
   Serial.println("Returning to neutral");
   hopper.write(90);
-  delay(2000);
+  waitForDurationAndCheckToStopPump(2000, start);
 }
 
-void waitForDurationAndCheckToStopPump(int duration, int start) {
+void waitForDurationAndCheckToStopPump(int duration, unsigned long start) {
   unsigned long x = millis();
   unsigned long end = x;
   while ((end - x) < duration) {
