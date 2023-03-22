@@ -19,14 +19,14 @@ VOLUME_MAP = {
 }
 
 
-def get_num_dispenses(strength: str | None, size: str | None):
+def get_num_dispenses(strength, size):
     if strength is None or size is None:
         return None
     key = strength + "_" + size
     return DISPENSER_MAP[key]
 
 
-def get_pump_time_ms(size: str | None):
+def get_pump_time_ms(size):
     if size is None:
         return None
     key = size
