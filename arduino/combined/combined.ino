@@ -248,9 +248,6 @@ void doAction() {
       delay(500);
     }
     stopBrew();
-
-    Serial.println("Brew stopped");
-    pingStop();
   } else if (action == "go" && !brew_started) {
     for (int i = 0; i < 5; i++) {
       WiFiDrv::digitalWrite(25, HIGH);
@@ -288,26 +285,43 @@ void stopBrew() {
 
   // Move down until we bottom out
   while (press_pos <= 105000) {
-    long new_pos = encoder.read();
-    if (new_pos == press_pos) {
-      break;
-    }
-    press_pos = new_pos;
+    press_pos = encoder.read();
   }
   
   // Stop motor when we bottom out
   motor.stop();
+  pingStop();
 
   // Wait until carafe is removed
   int carafeState = HIGH;
-  while (carafeState == HIGH) { carafeState = digitalRead(CARAFE); }
-  delay(2000);
+  while (carafeState == HIGH) { 
+    carafeState = digitalRead(CARAFE);
+    if(carafeState == LOW) {
+      for(int i = 0; i < 5; i ++ ) {
+        carafeState = digitalRead(CARAFE);
+        if(carafeState == HIGH) {
+          break;
+        }
+      }
+    }
+  }
+  delay(3000);
 
   // Move press to top
-  int topHit = LOW;
+  int top = LOW;
   motor.backward();
   
-  while (topHit == HIGH) { topHit = digitalRead(TOP); }
+  while (top == LOW) {
+    top = digitalRead(TOP);
+    if(top == HIGH) {
+      for(int i = 0; i < 5; i ++ ) {
+        top = digitalRead(TOP);
+        if(top == LOW) {
+          break;
+        }
+      }
+    }
+  }
 
   // Stop motor at top and reset encoder values
   motor.stop();
@@ -353,19 +367,6 @@ int readWaterSensor() {
   int val = analogRead(WATER_SIGNAL);
   digitalWrite(WATER_POWER, LOW);
   return val;
-}
-
-void controlMotor(int x) {
-  int direction = motor.getDirection();
-
-  if (x == 2) {
-    motor.forward();
-  } else if (x == -2) {
-    Serial.println("setting backwards");
-    motor.backward();
-  } else {
-    motor.stop();
-  }
 }
 
 String skipResponseHeaders(String response) {

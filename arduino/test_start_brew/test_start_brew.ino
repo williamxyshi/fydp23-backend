@@ -61,14 +61,13 @@ void loop() {
   // Wait until top is hit
   int top = LOW;
   motor.backward();
-  
+
+  // Debounce
   while (top == LOW) {
     top = digitalRead(TOP);
     if(top == HIGH) {
       for(int i = 0; i < 5; i ++ ) {
         top = digitalRead(TOP);
-        Serial.print("deb");
-        Serial.println(top);
         if(top == LOW) {
           break;
         }
@@ -82,33 +81,33 @@ void loop() {
 
   encoder.write(0);
 
-//  int carafeState = LOW;
-//  while (carafeState == LOW) { 
-//    carafeState = digitalRead(CARAFE);
-//    Serial.println("Carafe is low");
-//    if(carafeState == HIGH) {
-//      for(int i = 0; i < 5; i ++ ) {
-//        carafeState = digitalRead(CARAFE);
-//        if(carafeState == LOW) {
-//          break;
-//        }
-//      }
-//    }
-//  }
-//
-//  unsigned long start = millis();
-//  unsigned long end = start;
-//
-//  pump.forward();
-//  open_hopper(start);
-//
-//  while ((end - start) < waterInterval) {
-//    end = millis(); 
-//    Serial.print("Running pump: ");
-//    Serial.println(end - start);
-//  }
-//  pump.stop();
-//
+  int carafeState = LOW;
+  while (carafeState == LOW) { 
+    carafeState = digitalRead(CARAFE);
+    Serial.println("Carafe is low");
+    if(carafeState == HIGH) {
+      for(int i = 0; i < 5; i ++ ) {
+        carafeState = digitalRead(CARAFE);
+        if(carafeState == LOW) {
+          break;
+        }
+      }
+    }
+  }
+
+  unsigned long start = millis();
+  unsigned long end = start;
+
+  pump.forward();
+  open_hopper(start);
+
+  while ((end - start) < waterInterval) {
+    end = millis(); 
+    Serial.print("Running pump: ");
+    Serial.println(end - start);
+  }
+  pump.stop();
+
   delay(5000);
 
   motor.forward();
@@ -133,35 +132,35 @@ void loop() {
   // Stop motor when we bottom out
   motor.stop();
 
-//
-//  Serial.println("Waiting for carafe to be removed");
-//  carafeState = HIGH;
-//  while (carafeState == HIGH) { carafeState = digitalRead(CARAFE); }
-//  delay(2000);
-//
-//  // Wait until top is hit
-//  top = LOW;
-//  
-//  motor.backward();
-//  
-//  while (top == LOW) {
-//    top = digitalRead(TOP);
-//    if(top == HIGH) {
-//      for(int i = 0; i < 5; i ++ ) {
-//        top = digitalRead(TOP);
-//        Serial.print("deb");
-//        Serial.println(top);
-//        if(top == LOW) {
-//          break;
-//        }
-//      }
-//    }
-//    Serial.println(top);
-//  }
-//
-//  motor.stop();
-//  press_pos = -999;
-//  encoder.write(0);
+
+  Serial.println("Waiting for carafe to be removed");
+  carafeState = HIGH;
+  while (carafeState == HIGH) { carafeState = digitalRead(CARAFE); }
+  delay(2000);
+
+  // Wait until top is hit
+  top = LOW;
+  
+  motor.backward();
+  
+  while (top == LOW) {
+    top = digitalRead(TOP);
+    if(top == HIGH) {
+      for(int i = 0; i < 5; i ++ ) {
+        top = digitalRead(TOP);
+        Serial.print("deb");
+        Serial.println(top);
+        if(top == LOW) {
+          break;
+        }
+      }
+    }
+    Serial.println(top);
+  }
+
+  motor.stop();
+  press_pos = -999;
+  encoder.write(0);
 
   while(true) {}
 }
