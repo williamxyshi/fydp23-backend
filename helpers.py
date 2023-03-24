@@ -27,7 +27,7 @@ def get_num_dispenses(strength, size):
 
 
 def get_pump_time_ms(size, is_cold):
-    if is_cold:
+    if not is_cold:
         return 0
     if size is None:
         return None
