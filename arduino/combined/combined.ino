@@ -3,7 +3,6 @@
 #include <utility/wifi_drv.h>
 #include <L298N.h>
 #include <LiquidCrystal.h>
-#include <SoftwareSerial.h>
 #include <Servo.h>
 #include <Encoder.h>
 
@@ -17,6 +16,7 @@
 #define IN3 7
 #define IN4 8
 
+// Yellow 9, Green 10
 Encoder encoder(9, 10);
 
 // Servo pin
@@ -26,12 +26,9 @@ Encoder encoder(9, 10);
 #define WATER_SIGNAL A1
 #define WATER_POWER 12
 
-// joystick pins
-#define BUTTON 13
-
 // Limit switches
-#define CARAFE 0
-#define TOP 1
+#define CARAFE 13
+#define TOP 2
 
 L298N motor(ENA, IN1, IN2);
 long press_pos = -999;
@@ -39,16 +36,22 @@ long press_pos = -999;
 L298N pump(ENB, IN3, IN4);
 
 // Length of time in milliseconds to pump water for
-const unsigned long waterInterval = 1000L;
+unsigned long waterInterval = 22500L;
+
+// Number of times to open and close the hopper
+int num_dispenses = 5;
+
+// Action can be 'go', 'stop' or 'wait'
+String action = "wait";
 
 unsigned long lastConnectionTime = 0;
 
 const unsigned long postingInterval = 5L * 1000L;
 
-char ssid[] = "deadass";
-char pass[] = "ilovemywife";
+char ssid[] = "uuueeeeebbBBGgghh";//"deadass";
+char pass[] = "Conradgrebel69"; //"ilovemywife";
 
-char brew_host[] = "fydp.eba-twsqhru6.us-east-1.elasticbeanstalk.com";
+char brew_host[] =  "192.168.0.120";//"fydp.eba-twsqhru6.us-east-1.elasticbeanstalk.com";
 int port = 80;  // port
 
 int status = WL_IDLE_STATUS;  //connection status
@@ -94,7 +97,7 @@ void setup() {
   Serial.println(" dBm");
 
   // Motor
-  motor.setSpeed(100);
+  motor.setSpeed(122);
 
   // Pump max flow
   pump.setSpeed(255);
@@ -103,9 +106,16 @@ void setup() {
   pinMode(WATER_POWER, OUTPUT);
   digitalWrite(WATER_POWER, LOW);
 
-  pinMode(BUTTON, INPUT);
-  pinMode(CARAFE, INPUT);
-  pinMode(TOP, INPUT);
+  pinMode(CARAFE, INPUT_PULLUP);
+  pinMode(TOP, INPUT_PULLUP);
+
+  int topHit = LOW;
+  motor.backward();
+  
+  while (topHit == LOW) { topHit = digitalRead(TOP); }
+
+  motor.stop();
+  encoder.write(0);
 }
 
 void loop() {
@@ -118,34 +128,40 @@ void loop() {
   }
 
   if (response != "") {
-    Serial.println(response);
+    String json_str = response;
 
-    String json_str = skipResponseHeaders(response);
-
+    if (response.startsWith("HTTP")) {
+      json_str = skipResponseHeaders(response);
+    }
+    
     // JSON doc used to deserialize JSON strings
     StaticJsonDocument<200> doc;
 
     DeserializationError error = deserializeJson(doc, json_str);
 
-    if (error) {
-      Serial.print(F("deserializeJson() failed: "));
-      Serial.println(error.f_str());
-    } else {
+    if (!error) {
       Serial.println("Deserialized (json is valid)");
 
-      String action = doc["action"];
+      String response_action = doc["action"];
+      action = response_action;
+      
+      num_dispenses = doc["num_dispenses"];
+      Serial.println(num_dispenses);
+      
+      waterInterval = doc["pump_time"];
+      Serial.println(waterInterval);
 
-      doAction(action);
+      doAction();
     }
   }
 
-  int val = readWaterSensor();
-
-  if (val < 450) {
-    WiFiDrv::digitalWrite(27, HIGH);
-  } else {
-    WiFiDrv::digitalWrite(27, LOW);
-  }
+//  int val = readWaterSensor();
+//
+//  if (val < 450) {
+//    WiFiDrv::digitalWrite(27, HIGH);
+//  } else {
+//    WiFiDrv::digitalWrite(27, LOW);
+//  }
 }
 
 void connectBrewDaddy() {
@@ -155,8 +171,8 @@ void connectBrewDaddy() {
     Serial.print("connected to brew daddy: ");
     Serial.println(brew_host);
 
-    client.println("GET /demo HTTP/1.1");
-    client.println("Host: fydp.eba-twsqhru6.us-east-1.elasticbeanstalk.com");
+    client.println("GET /action HTTP/1.1");
+    client.println("Host: 192.168.0.120");
     client.println("Connection: keep-alive");
     client.println("Accept: */*");
 
@@ -167,7 +183,60 @@ void connectBrewDaddy() {
   }
 }
 
-void doAction(String action) {
+
+void pingStart() {
+  client.stop();
+  Serial.println("Pinging endpoint to start brew");
+  if (client.connect(brew_host, port)) {
+    Serial.print("connected to brew daddy: ");
+    Serial.println(brew_host);
+
+    client.println("GET /start HTTP/1.1");
+    client.println("Host: 192.168.0.120");
+    client.println("Connection: keep-alive");
+    client.println("Accept: */*");
+
+    client.println();
+    lastConnectionTime = millis();
+
+    String response = "";
+    // Drain response
+    while (client.available()) {
+      response += char(client.read());
+    }
+    client.stop();
+  } else {
+    Serial.println("Connection failed");
+  }
+}
+
+void pingStop() {
+  client.stop();
+  Serial.println("Pinging endpoint to finish brew");
+  if (client.connect(brew_host, port)) {
+    Serial.print("connected to brew daddy: ");
+    Serial.println(brew_host);
+
+    client.println("GET /finish HTTP/1.1");
+    client.println("Host: 192.168.0.120");
+    client.println("Connection: keep-alive");
+    client.println("Accept: */*");
+
+    client.println();
+    lastConnectionTime = millis();
+
+    String response = "";
+    // Drain response
+    while (client.available()) {
+      response += char(client.read());
+    }
+    client.stop();
+  } else {
+    Serial.println("Connection failed");
+  }
+}
+
+void doAction() {
   Serial.print("Doing action: ");
   Serial.println(action);
 
@@ -178,32 +247,7 @@ void doAction(String action) {
       WiFiDrv::digitalWrite(26, LOW);
       delay(500);
     }
-
-    //    WiFiDrv::digitalWrite(26, HIGH);
-    //
-    //    while(digitalRead(BUTTON) != HIGH) {}
-    //
-    //    controlMotor(-2);
-    //
-    //    while(digitalRead(BUTTON) != LOW) {}
-    //
-    //    while(digitalRead(BUTTON) != HIGH) {}
-    //
-    //    controlMotor(0);
-    //
-    //    while(digitalRead(BUTTON) != LOW) {}
-    //
-    //    while(digitalRead(BUTTON) != HIGH) {}
-    //
-    //    controlMotor(2);
-    //
-    //    while(digitalRead(BUTTON) != LOW) {}
-    //
-    //    while(digitalRead(BUTTON) != HIGH) {}
-    //
-    //    controlMotor(0);
-    //
-    //    WiFiDrv::digitalWrite(26, LOW);
+    stopBrew();
   } else if (action == "go" && !brew_started) {
     for (int i = 0; i < 5; i++) {
       WiFiDrv::digitalWrite(25, HIGH);
@@ -213,31 +257,24 @@ void doAction(String action) {
     }
 
     startBrew();
+
+    Serial.println("Brew started");
+    pingStart();
   }
 }
 
 void startBrew() {
+  Serial.println("Starting brew");
   unsigned long start = millis();
   unsigned long end = start;
 
   pump.forward();
-  // Pump water for a bit
-  while ((end - start) < waterInterval) { end = millis(); }
-  pump.stop();
 
   // Dispense grounds
-  // Open
-  for (hopper_pos = 0; hopper_pos <= 180; hopper_pos += 1) {
-    hopper.write(hopper_pos);
-    delay(15);
-  }
-  // Wait for gravity to do work
-  delay(500);
-  // Close
-  for (hopper_pos = 180; hopper_pos >= 0; hopper_pos -= 1) {
-    hopper.write(hopper_pos);
-    delay(15);
-  }
+  open_hopper(start);
+
+  while ((end - start) < waterInterval) { end = millis(); }
+  pump.stop();
 
   brew_started = true;
   brew_stopped = false;
@@ -247,22 +284,44 @@ void stopBrew() {
   motor.forward();
 
   // Move down until we bottom out
-  while (press_pos <= 96000) {
-    long new_pos = encoder.read();
-    press_pos = new_pos
+  while (press_pos <= 105000) {
+    press_pos = encoder.read();
   }
   
   // Stop motor when we bottom out
   motor.stop();
+  pingStop();
 
   // Wait until carafe is removed
-  int carafeIn = 1;
-  while (carafeState) {carafeState = digitalRead(CARAFE);}
+  int carafeState = HIGH;
+  while (carafeState == HIGH) { 
+    carafeState = digitalRead(CARAFE);
+    if(carafeState == LOW) {
+      for(int i = 0; i < 5; i ++ ) {
+        carafeState = digitalRead(CARAFE);
+        if(carafeState == HIGH) {
+          break;
+        }
+      }
+    }
+  }
+  delay(3000);
 
   // Move press to top
-  int topHit = 0;
+  int top = LOW;
   motor.backward();
-  while (!topHit) {topHit = digitalRead(TOP);}
+  
+  while (top == LOW) {
+    top = digitalRead(TOP);
+    if(top == HIGH) {
+      for(int i = 0; i < 5; i ++ ) {
+        top = digitalRead(TOP);
+        if(top == LOW) {
+          break;
+        }
+      }
+    }
+  }
 
   // Stop motor at top and reset encoder values
   motor.stop();
@@ -273,6 +332,35 @@ void stopBrew() {
   brew_stopped = true;
 }
 
+// Opens hopper while checking if we should stop the pump
+void open_hopper(unsigned long start) {
+  for (int i = 0; i < num_dispenses; i++) {
+    Serial.println("OPENING TOP");
+    hopper.write(0);
+    waitForDurationAndCheckToStopPump(2000, start);
+    //delay(2000);
+
+    Serial.println("OPENING BOTTOM");
+    hopper.write(180);
+    waitForDurationAndCheckToStopPump(2000, start);
+  }
+
+  Serial.println("Returning to neutral");
+  hopper.write(90);
+  waitForDurationAndCheckToStopPump(2000, start);
+}
+
+void waitForDurationAndCheckToStopPump(int duration, unsigned long start) {
+  unsigned long x = millis();
+  unsigned long end = x;
+  while ((end - x) < duration) {
+    end = millis();
+    if ((end - start) >= waterInterval) {
+      pump.stop();
+    }
+  }
+}
+
 int readWaterSensor() {
   digitalWrite(WATER_POWER, HIGH);
   delay(10);
@@ -281,26 +369,13 @@ int readWaterSensor() {
   return val;
 }
 
-void controlMotor(int x) {
-  int direction = motor.getDirection();
-
-  if (x == 2) {
-    motor.forward();
-  } else if (x == -2) {
-    Serial.println("setting backwards");
-    motor.backward();
-  } else {
-    motor.stop();
-  }
-}
-
 String skipResponseHeaders(String response) {
   int i = response.indexOf("\r\n\r\n");
   if (i != -1) {
-    String json_str = response.substring(i + 4);
+    String return_str = response.substring(i + 4);
     Serial.print("Skipping headers, we get: ");
-    Serial.println(json_str);
-    return json_str;
+    Serial.println(return_str);
+    return return_str;
   }
   return "";
 }
