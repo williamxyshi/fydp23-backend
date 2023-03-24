@@ -11,6 +11,7 @@ state = State()
 
 @app.post("/brew/schedule")
 async def scheduled_brew(data: ScheduledBrew):
+    scheduler.remove_all_jobs()
     state.schedule = Schedule(data.days, data.ready_time)
     for day in data.days:
         await scheduler.add_scheduled_brew_job(
@@ -51,11 +52,13 @@ async def get_action():
 @app.get("/start")
 async def start():
     state.start_event.set()
+    return {"message": "pinged successfully"}
 
 
 @app.get("/finish")
 async def finish():
     state.finish_event.set()
+    return {"message": "pinged successfully"}
 
 
 @app.get("/status")
@@ -64,6 +67,8 @@ async def get_brew_status():
         "start_timestamp": state.start_timestamp,
         "finish_timestamp": state.finish_timestamp,
         "duration": state.duration,
+        "is_brewing": state.is_brewing,
+        "is_done": state.is_done,
     }
 
 
