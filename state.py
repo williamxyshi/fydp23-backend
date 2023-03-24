@@ -26,6 +26,7 @@ class State:
         self.schedule: Schedule | None = None
         self.is_brewing: bool = False
         self.is_done: bool = False
+        self.is_cold: bool = True
 
     # the amount of times the arduino should open + close dispenser doors
     def num_dispenses(self):
