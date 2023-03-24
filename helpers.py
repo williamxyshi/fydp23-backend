@@ -26,7 +26,9 @@ def get_num_dispenses(strength, size):
     return DISPENSER_MAP[key]
 
 
-def get_pump_time_ms(size):
+def get_pump_time_ms(size, is_cold):
+    if is_cold:
+        return 0
     if size is None:
         return None
     key = size

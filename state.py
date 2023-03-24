@@ -33,4 +33,4 @@ class State:
 
     # number of milliseconds arduino should run pump for
     def pump_time_ms(self):
-        return get_pump_time_ms(self.size)
+        return get_pump_time_ms(self.size, self.is_cold)

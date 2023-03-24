@@ -6,6 +6,7 @@ class SingleBrew(BaseModel):
     size: str
     strength: str
     duration: int  # in seconds!
+    is_cold: bool
 
 
 class ScheduledBrew(BaseModel):
@@ -14,6 +15,7 @@ class ScheduledBrew(BaseModel):
     size: str
     strength: str
     duration: int  # in seconds!
+    is_cold: bool
 
 
 class Demo(BaseModel):

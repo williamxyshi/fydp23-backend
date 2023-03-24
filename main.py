@@ -20,6 +20,7 @@ async def scheduled_brew(data: ScheduledBrew):
             duration=data.duration,
             strength=data.strength,
             size=data.size,
+            is_cold=data.is_cold
             state=state,
         )
 
@@ -31,6 +32,7 @@ async def single_brew(data: SingleBrew):
         duration=data.duration,
         strength=data.strength,
         size=data.size,
+        is_cold=data.is_cold
         state=state,
     )
 
